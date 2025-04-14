@@ -128,6 +128,13 @@ M.run_all_cells = function(repl_provider, repl_args)
   repl(1, buf_length, repl_args)
 end
 
+M.run_cells_above = function(cell_marker, repl_provider, repl_args)
+  local cell_object = miniai_spec("i", cell_marker)
+
+  local repl = get_repl(repl_provider)
+  repl(1, cell_object.to.line, repl_args)
+end
+
 M.run_cells_below = function(cell_marker, repl_provider, repl_args)
   local buf_length = vim.api.nvim_buf_line_count(0)
   local cell_object = miniai_spec("i", cell_marker)
