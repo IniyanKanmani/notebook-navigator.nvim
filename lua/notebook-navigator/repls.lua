@@ -44,15 +44,8 @@ end
 -- molten
 ---@diagnostic disable-next-line: unused-local
 repls.molten = function(start_line, end_line, repl_args, cell_marker)
-  local line_count = vim.api.nvim_buf_line_count(0)
-
-  if line_count < (end_line + 1) then
-    vim.api.nvim_buf_set_lines(0, end_line + 1, end_line + 1, false, { cell_marker, "" })
-  end
-
-  local ok, _ = pcall(vim.fn.MoltenEvaluateRange, start_line, end_line + 1)
+  local ok, _ = pcall(vim.fn.MoltenEvaluateRange, start_line, end_line)
   if not ok then
-    vim.cmd "MoltenInit"
     return false
   end
 
@@ -62,7 +55,22 @@ end
 -- no repl
 repls.no_repl = function(_) end
 
-local get_repl = function(repl_provider)
+repls.initialize = function(repl_provider)
+  if repl_provider == "molten" then
+    local ok, value = pcall(vim.fn.MoltenRunningKernels, true)
+    vim.notify(vim.inspect(value), vim.log.levels.INFO)
+
+    if not ok or #value == 0 then
+      vim.cmd "MoltenInit"
+
+      return false
+    end
+  end
+
+  return true
+end
+
+repls.get_repl = function(repl_provider)
   local available_repls = utils.available_repls
   local chosen_repl = nil
   if repl_provider == "auto" then
@@ -83,4 +91,4 @@ local get_repl = function(repl_provider)
   return chosen_repl
 end
 
-return get_repl
+return repls
