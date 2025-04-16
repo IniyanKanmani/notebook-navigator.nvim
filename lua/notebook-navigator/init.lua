@@ -154,6 +154,16 @@ M.add_cell_above = function()
   core.add_cell_above(cell_marker())
 end
 
+--- Create a text cell under the current one and move to it
+M.add_text_cell_below = function()
+  core.add_text_cell_below(cell_marker())
+end
+
+--- Create a text cell on top of the current one and move to it
+M.add_text_cell_above = function()
+  core.add_text_cell_above(cell_marker())
+end
+
 --- Spit the cell at the current position by inserting a cell marker
 M.split_cell = function()
   core.split_cell(cell_marker())

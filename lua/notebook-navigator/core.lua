@@ -214,6 +214,38 @@ M.add_cell_above = function(cell_marker)
   M.move_cell("u", cell_marker)
 end
 
+M.add_text_cell_below = function(cell_marker)
+  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+
+  vim.api.nvim_buf_set_lines(
+    0,
+    cell_object.to.line,
+    cell_object.to.line,
+    false,
+    { cell_marker .. " [markdown]", '"""', "", '"""', "" }
+  )
+
+  M.move_cell("d", cell_marker)
+  vim.api.nvim_win_set_cursor(0, { cell_object.to.line + 3, 0 })
+end
+
+M.add_text_cell_above = function(cell_marker)
+  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+
+  -- What to do on malformed notebooks? I.e. with no upper cell marker? are they malformed?
+  -- What if we have a jupytext header? Code doesn't start at top of buffer.
+  vim.api.nvim_buf_set_lines(
+    0,
+    cell_object.from.line - 1,
+    cell_object.from.line - 1,
+    false,
+    { cell_marker .. " [markdown]", '"""', "", '"""', "" }
+  )
+
+  M.move_cell("u", cell_marker)
+  vim.api.nvim_win_set_cursor(0, { cell_object.from.line + 2, 0 })
+end
+
 -- We keep this two for backwards compatibility but the prefered way is to use
 -- the above/below functions for consistency with jupyter nomenclature
 M.add_cell_before = function(cell_marker)
