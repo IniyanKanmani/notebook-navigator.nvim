@@ -1,6 +1,6 @@
 local commenter = require "notebook-navigator.commenters"
 local repls = require "notebook-navigator.repls"
-local miniai_spec = require "notebook-navigator.miniai_spec"
+local cells = require "notebook-navigator.cells"
 
 local M = {}
 
@@ -33,19 +33,19 @@ M.swap_cell = function(dir, cell_marker)
   local first_cell
   local second_cell
   if dir == "d" then
-    second_cell = miniai_spec.miniai_spec("a", cell_marker)
+    second_cell = cells.miniai_spec("a", cell_marker)
     if second_cell.to.line + 1 > buf_length then
       return
     end
     vim.api.nvim_win_set_cursor(0, { second_cell.to.line + 2, 0 })
-    first_cell = miniai_spec.miniai_spec("a", cell_marker)
+    first_cell = cells.miniai_spec("a", cell_marker)
   else
-    first_cell = miniai_spec.miniai_spec("a", cell_marker)
+    first_cell = cells.miniai_spec("a", cell_marker)
     if first_cell.from.line - 1 < 1 then
       return
     end
     vim.api.nvim_win_set_cursor(0, { first_cell.from.line - 1, 0 })
-    second_cell = miniai_spec.miniai_spec("a", cell_marker)
+    second_cell = cells.miniai_spec("a", cell_marker)
 
     -- The first cell may not have a marker. If this is the case and we attempt to
     -- swap it down we will be in trouble. In that case we first insert a marker at
@@ -94,7 +94,9 @@ end
 M.run_cell = function(cell_marker, repl_provider, repl_args)
   repl_args = repl_args or nil
   repl_provider = repl_provider or "auto"
-  local cell_object = miniai_spec.miniai_spec("i", cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
+
+  local repl = repls.get_repl(repl_provider)
 
   -- protect ourselves against the case with no actual lines of code
   local n_lines = cell_object.to.line - cell_object.from.line + 1
@@ -102,14 +104,12 @@ M.run_cell = function(cell_marker, repl_provider, repl_args)
     return nil
   end
 
-  local repl = repls.get_repl(repl_provider)
-
-  local is_initialized = repls.initialize(repl_provider)
-  if not is_initialized then
-    return nil
+  if cells.check_for_markdown_cells(cell_marker, cell_object.from.line) then
+    return true
   end
 
-  return repl(cell_object.from.line, cell_object.to.line, repl_args, cell_marker)
+  ---@diagnostic disable-next-line: redundant-parameter
+  return repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
 end
 
 M.run_and_move = function(cell_marker, repl_provider, repl_args)
@@ -133,32 +133,22 @@ M.run_all_cells = function(cell_marker, repl_provider, repl_args)
 end
 
 M.run_cells_above = function(cell_marker, repl_provider, repl_args)
-  local all_cell_objects_above = miniai_spec.find_cells_above_cursor("i", cell_marker)
-
+  local code_cells = cells.find_cells_above_cursor(cell_marker)
   local repl = repls.get_repl(repl_provider)
 
-  local is_initialized = repls.initialize(repl_provider)
-  if not is_initialized then
-    return nil
-  end
-
-  for _, cell_object in ipairs(all_cell_objects_above) do
-    repl(cell_object.from.line, cell_object.to.line, repl_args)
+  for _, cell_object in ipairs(code_cells) do
+    ---@diagnostic disable-next-line: redundant-parameter
+    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
   end
 end
 
 M.run_cells_below = function(cell_marker, repl_provider, repl_args)
-  local all_cell_objects_below = miniai_spec.find_cells_below_cursor("i", cell_marker)
-
+  local code_cells = cells.find_cells_below_cursor(cell_marker)
   local repl = repls.get_repl(repl_provider)
 
-  local is_initialized = repls.initialize(repl_provider)
-  if not is_initialized then
-    return nil
-  end
-
-  for _, cell_object in ipairs(all_cell_objects_below) do
-    repl(cell_object.from.line, cell_object.to.line, repl_args)
+  for _, cell_object in ipairs(code_cells) do
+    ---@diagnostic disable-next-line: redundant-parameter
+    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
   end
 end
 
@@ -182,7 +172,7 @@ M.merge_cell = function(dir, cell_marker)
 end
 
 M.comment_cell = function(cell_marker)
-  local cell_object = miniai_spec.miniai_spec("i", cell_marker)
+  local cell_object = cells.miniai_spec("i", cell_marker)
 
   -- protect against empty cells
   local n_lines = cell_object.to.line - cell_object.from.line + 1
@@ -193,14 +183,14 @@ M.comment_cell = function(cell_marker)
 end
 
 M.add_cell_below = function(cell_marker)
-  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
 
   vim.api.nvim_buf_set_lines(0, cell_object.to.line, cell_object.to.line, false, { cell_marker, "" })
   M.move_cell("d", cell_marker)
 end
 
 M.add_cell_above = function(cell_marker)
-  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
 
   -- What to do on malformed notebooks? I.e. with no upper cell marker? are they malformed?
   -- What if we have a jupytext header? Code doesn't start at top of buffer.
@@ -215,7 +205,7 @@ M.add_cell_above = function(cell_marker)
 end
 
 M.add_text_cell_below = function(cell_marker)
-  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
 
   vim.api.nvim_buf_set_lines(
     0,
@@ -230,7 +220,7 @@ M.add_text_cell_below = function(cell_marker)
 end
 
 M.add_text_cell_above = function(cell_marker)
-  local cell_object = miniai_spec.miniai_spec("a", cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
 
   -- What to do on malformed notebooks? I.e. with no upper cell marker? are they malformed?
   -- What if we have a jupytext header? Code doesn't start at top of buffer.

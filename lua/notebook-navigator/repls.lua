@@ -4,7 +4,7 @@ local utils = require "notebook-navigator.utils"
 
 -- iron.nvim
 ---@diagnostic disable-next-line: unused-local
-repls.iron = function(start_line, end_line, repl_args, _cell_marker)
+repls.iron = function(start_line, end_line, repl_args)
   local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
   require("iron.core").send(nil, lines)
 
@@ -13,7 +13,7 @@ end
 
 -- toggleterm
 ---@diagnostic disable-next-line: unused-local
-repls.toggleterm = function(start_line, end_line, repl_args, cell_marker)
+repls.toggleterm = function(start_line, end_line, repl_args)
   local id = 1
   local trim_spaces = false
   if repl_args then
@@ -43,7 +43,7 @@ end
 
 -- molten
 ---@diagnostic disable-next-line: unused-local
-repls.molten = function(start_line, end_line, repl_args, cell_marker)
+repls.molten = function(start_line, end_line, repl_args)
   local ok, _ = pcall(vim.fn.MoltenEvaluateRange, start_line, end_line)
   if not ok then
     return false
@@ -58,13 +58,18 @@ repls.no_repl = function(_) end
 repls.initialize = function(repl_provider)
   if repl_provider == "molten" then
     local ok, value = pcall(vim.fn.MoltenRunningKernels, true)
-    vim.notify(vim.inspect(value), vim.log.levels.INFO)
 
-    if not ok or #value == 0 then
-      vim.cmd "MoltenInit"
-
-      return false
+    if ok and #value > 0 then
+      return true
     end
+
+    ok, value = pcall(vim.api.nvim_exec2, "MoltenInit", { output = true })
+
+    if ok then
+      return true
+    end
+
+    return false
   end
 
   return true
@@ -82,11 +87,13 @@ repls.get_repl = function(repl_provider)
     chosen_repl = repls[repl_provider]
   end
 
-  -- Check if we actuall got out a supported repl
+  -- Check if we actually got out a supported repl
   if chosen_repl == nil then
     vim.notify("[NotebookNavigator] The provided repl, " .. repl_provider .. ", is not supported.")
     chosen_repl = repls["no_repl"]
   end
+
+  repls.initialize(repl_provider)
 
   return chosen_repl
 end
