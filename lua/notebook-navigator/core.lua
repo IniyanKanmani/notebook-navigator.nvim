@@ -246,6 +246,15 @@ M.add_cell_after = function(cell_marker)
   M.add_cell_below(cell_marker)
 end
 
+M.visually_select_cell = function(ai, cell_marker)
+  local cell_object = cells.miniai_spec(ai, cell_marker)
+
+  vim.fn.setpos("'<", { 0, cell_object.from.line, cell_object.from.col, 0 })
+  vim.fn.setpos("'>", { 0, cell_object.to.line, cell_object.to.col, 0 })
+
+  vim.cmd "normal! gv"
+end
+
 M.change_cell = function(ai, cell_marker)
   local cell_object = cells.miniai_spec(ai, cell_marker)
 

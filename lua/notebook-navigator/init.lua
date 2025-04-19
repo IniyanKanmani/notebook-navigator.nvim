@@ -164,6 +164,11 @@ M.add_text_cell_above = function()
   core.add_text_cell_above(cell_marker())
 end
 
+--- Visually select whole cell or cell contents
+M.visually_select_cell = function(ai)
+  core.visually_select_cell(ai, cell_marker())
+end
+
 --- Change whole cell or cell contents
 M.change_cell = function(ai)
   core.change_cell(ai, cell_marker())
