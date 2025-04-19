@@ -164,6 +164,11 @@ M.add_text_cell_above = function()
   core.add_text_cell_above(cell_marker())
 end
 
+--- Delete whole cell or cell contents
+M.delete_cell = function(ai)
+  core.delete_cell(ai, cell_marker())
+end
+
 --- Spit the cell at the current position by inserting a cell marker
 M.split_cell = function()
   core.split_cell(cell_marker())

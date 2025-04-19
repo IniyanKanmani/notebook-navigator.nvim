@@ -246,6 +246,33 @@ M.add_cell_after = function(cell_marker)
   M.add_cell_below(cell_marker)
 end
 
+M.delete_cell = function(ai, cell_marker)
+  local cell_object = {}
+
+  if ai == "a" then
+    cell_object = cells.miniai_spec("a", cell_marker)
+
+    vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.to.line, false, {})
+
+    if cell_object.from.line < vim.api.nvim_buf_line_count(0) then
+      vim.api.nvim_win_set_cursor(0, { cell_object.from.line, 0 })
+    else
+      M.move_cell("u", cell_marker)
+    end
+  elseif ai == "i" then
+    cell_object = cells.miniai_spec("i", cell_marker)
+
+    vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.to.line, false, {})
+    vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.from.line - 1, false, { "" })
+
+    if cell_object.from.line > 1 then
+      vim.api.nvim_win_set_cursor(0, { cell_object.from.line - 1, 0 })
+    else
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    end
+  end
+end
+
 M.split_cell = function(cell_marker)
   local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
   vim.api.nvim_buf_set_lines(0, cursor_line - 1, cursor_line - 1, false, { cell_marker })
