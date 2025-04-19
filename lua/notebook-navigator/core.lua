@@ -246,6 +246,17 @@ M.add_cell_after = function(cell_marker)
   M.add_cell_below(cell_marker)
 end
 
+M.change_cell = function(ai, cell_marker)
+  local cell_object = cells.miniai_spec(ai, cell_marker)
+
+  vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.to.line, false, {})
+  vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.from.line - 1, false, { "" })
+
+  vim.api.nvim_win_set_cursor(0, { cell_object.from.line, 0 })
+
+  vim.cmd "startinsert"
+end
+
 M.delete_cell = function(ai, cell_marker)
   local cell_object = {}
 

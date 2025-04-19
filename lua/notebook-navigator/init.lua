@@ -164,6 +164,11 @@ M.add_text_cell_above = function()
   core.add_text_cell_above(cell_marker())
 end
 
+--- Change whole cell or cell contents
+M.change_cell = function(ai)
+  core.change_cell(ai, cell_marker())
+end
+
 --- Delete whole cell or cell contents
 M.delete_cell = function(ai)
   core.delete_cell(ai, cell_marker())
