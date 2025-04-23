@@ -85,24 +85,6 @@ M.run_and_move = function(repl_args)
   core.run_and_move(cell_marker(), M.config.repl_provider, repl_args)
 end
 
---- Swap the current cell with the cell immediately above or below
----
---- Swap cell with the above or below
----
----@param dir string Swap direction. "d" for down and "u" for up.
-M.swap_cell = function(dir)
-  return core.swap_cell(dir, cell_marker())
-end
-
---- Merge cell
----
---- Merge cell with the above or below
----
----@param dir string Merge direction. "d" for down and "u" for up.
-M.merge_cell = function(dir)
-  return core.merge_cell(dir, cell_marker())
-end
-
 --- Run all cells in the file
 ---
 ---@param repl_args table|nil Optional config for the repl.
@@ -122,6 +104,29 @@ end
 ---@param repl_args table|nil Optional config for the repl.
 M.run_cells_below = function(repl_args)
   core.run_cells_below(cell_marker(), M.config.repl_provider, repl_args)
+end
+
+--- Spit the cell at the current position by inserting a cell marker
+M.split_cell = function()
+  core.split_cell(cell_marker())
+end
+
+--- Merge cell
+---
+--- Merge cell with the above or below
+---
+---@param dir string Merge direction. "d" for down and "u" for up.
+M.merge_cell = function(dir)
+  return core.merge_cell(dir, cell_marker())
+end
+
+--- Swap the current cell with the cell immediately above or below
+---
+--- Swap cell with the above or below
+---
+---@param dir string Swap direction. "d" for down and "u" for up.
+M.swap_cell = function(dir)
+  return core.swap_cell(dir, cell_marker())
 end
 
 --- Comment all the contents of the cell under the cursor
@@ -164,6 +169,16 @@ M.add_text_cell_above = function()
   core.add_text_cell_above(cell_marker())
 end
 
+--- Convert cell to code cell
+M.convert_to_code_cell = function()
+  core.convert_to_code_cell(cell_marker())
+end
+
+--- Convert cell to markdown cell
+M.convert_to_markdown_cell = function()
+  core.convert_to_markdown_cell(cell_marker())
+end
+
 --- Visually select whole cell or cell contents
 M.visually_select_cell = function(ai)
   core.visually_select_cell(ai, cell_marker())
@@ -177,11 +192,6 @@ end
 --- Delete whole cell or cell contents
 M.delete_cell = function(ai)
   core.delete_cell(ai, cell_marker())
-end
-
---- Spit the cell at the current position by inserting a cell marker
-M.split_cell = function()
-  core.split_cell(cell_marker())
 end
 
 local hydra_hint = [[

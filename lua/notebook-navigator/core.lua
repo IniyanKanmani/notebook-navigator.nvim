@@ -24,6 +24,95 @@ M.move_cell = function(dir, cell_marker)
   return result
 end
 
+M.run_cell = function(cell_marker, repl_provider, repl_args)
+  repl_args = repl_args or nil
+  repl_provider = repl_provider or "auto"
+  local cell_object = cells.miniai_spec("a", cell_marker)
+
+  local repl = repls.get_repl(repl_provider)
+
+  -- protect ourselves against the case with no actual lines of code
+  local n_lines = cell_object.to.line - cell_object.from.line + 1
+  if n_lines < 1 then
+    return nil
+  end
+
+  if cells.check_for_markdown_cells(cell_marker, cell_object.from.line) then
+    return true
+  end
+
+  ---@diagnostic disable-next-line: redundant-parameter
+  return repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
+end
+
+M.run_and_move = function(cell_marker, repl_provider, repl_args)
+  local success = M.run_cell(cell_marker, repl_provider, repl_args)
+
+  if success then
+    local is_last_cell = M.move_cell("d", cell_marker) == "last"
+
+    -- insert a new cell to replicate the behaviour of jupyter notebooks
+    if is_last_cell then
+      vim.api.nvim_buf_set_lines(0, -1, -1, false, { cell_marker, "" })
+      -- and move to it
+      M.move_cell("d", cell_marker)
+    end
+  end
+end
+
+M.run_all_cells = function(cell_marker, repl_provider, repl_args)
+  M.run_cells_above(cell_marker, repl_provider, repl_args)
+  M.run_cells_below(cell_marker, repl_provider, repl_args)
+end
+
+M.run_cells_above = function(cell_marker, repl_provider, repl_args)
+  local code_cells = cells.find_cells_above_cursor(cell_marker)
+  local repl = repls.get_repl(repl_provider)
+
+  for _, cell_object in ipairs(code_cells) do
+    ---@diagnostic disable-next-line: redundant-parameter
+    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
+  end
+end
+
+M.run_cells_below = function(cell_marker, repl_provider, repl_args)
+  local code_cells = cells.find_cells_below_cursor(cell_marker)
+  local repl = repls.get_repl(repl_provider)
+
+  for _, cell_object in ipairs(code_cells) do
+    ---@diagnostic disable-next-line: redundant-parameter
+    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
+  end
+
+  vim.cmd "normal G"
+  M.move_cell("u", cell_marker)
+end
+
+M.split_cell = function(cell_marker)
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  vim.api.nvim_buf_set_lines(0, cursor_line - 1, cursor_line - 1, false, { cell_marker })
+  vim.api.nvim_win_set_cursor(0, { cursor_line + 1, 0 })
+end
+
+M.merge_cell = function(dir, cell_marker)
+  local search_res
+  local result
+
+  if dir == "d" then
+    search_res = vim.fn.search("^" .. cell_marker, "nW")
+    vim.api.nvim_buf_set_lines(0, search_res - 1, search_res, false, { "" })
+  else
+    search_res = vim.fn.search("^" .. cell_marker, "nbW")
+    if search_res == 0 then
+      return "first"
+    else
+      vim.api.nvim_buf_set_lines(0, search_res - 1, search_res, false, { "" })
+    end
+  end
+
+  return result
+end
+
 M.swap_cell = function(dir, cell_marker)
   local buf_length = vim.api.nvim_buf_line_count(0)
   local should_insert_marker = false
@@ -91,97 +180,6 @@ M.swap_cell = function(dir, cell_marker)
   vim.api.nvim_win_set_cursor(0, new_cursor)
 end
 
-M.run_cell = function(cell_marker, repl_provider, repl_args)
-  repl_args = repl_args or nil
-  repl_provider = repl_provider or "auto"
-  local cell_object = cells.miniai_spec("a", cell_marker)
-
-  local repl = repls.get_repl(repl_provider)
-
-  -- protect ourselves against the case with no actual lines of code
-  local n_lines = cell_object.to.line - cell_object.from.line + 1
-  if n_lines < 1 then
-    return nil
-  end
-
-  if cells.check_for_markdown_cells(cell_marker, cell_object.from.line) then
-    return true
-  end
-
-  ---@diagnostic disable-next-line: redundant-parameter
-  return repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
-end
-
-M.run_and_move = function(cell_marker, repl_provider, repl_args)
-  local success = M.run_cell(cell_marker, repl_provider, repl_args)
-
-  if success then
-    local is_last_cell = M.move_cell("d", cell_marker) == "last"
-
-    -- insert a new cell to replicate the behaviour of jupyter notebooks
-    if is_last_cell then
-      vim.api.nvim_buf_set_lines(0, -1, -1, false, { cell_marker, "" })
-      -- and move to it
-      M.move_cell("d", cell_marker)
-    end
-  end
-end
-
-M.run_all_cells = function(cell_marker, repl_provider, repl_args)
-  M.run_cells_above(cell_marker, repl_provider, repl_args)
-  M.run_cells_below(cell_marker, repl_provider, repl_args)
-end
-
-M.run_cells_above = function(cell_marker, repl_provider, repl_args)
-  local code_cells = cells.find_cells_above_cursor(cell_marker)
-  local repl = repls.get_repl(repl_provider)
-
-  for _, cell_object in ipairs(code_cells) do
-    ---@diagnostic disable-next-line: redundant-parameter
-    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
-  end
-end
-
-M.run_cells_below = function(cell_marker, repl_provider, repl_args)
-  local code_cells = cells.find_cells_below_cursor(cell_marker)
-  local repl = repls.get_repl(repl_provider)
-
-  for _, cell_object in ipairs(code_cells) do
-    ---@diagnostic disable-next-line: redundant-parameter
-    repl(cell_object.from.line + 1, cell_object.to.line, repl_args)
-  end
-end
-
-M.merge_cell = function(dir, cell_marker)
-  local search_res
-  local result
-
-  if dir == "d" then
-    search_res = vim.fn.search("^" .. cell_marker, "nW")
-    vim.api.nvim_buf_set_lines(0, search_res - 1, search_res, false, { "" })
-  else
-    search_res = vim.fn.search("^" .. cell_marker, "nbW")
-    if search_res == 0 then
-      return "first"
-    else
-      vim.api.nvim_buf_set_lines(0, search_res - 1, search_res, false, { "" })
-    end
-  end
-
-  return result
-end
-
-M.comment_cell = function(cell_marker)
-  local cell_object = cells.miniai_spec("i", cell_marker)
-
-  -- protect against empty cells
-  local n_lines = cell_object.to.line - cell_object.from.line + 1
-  if n_lines < 1 then
-    return nil
-  end
-  commenter(cell_object)
-end
-
 M.add_cell_below = function(cell_marker)
   local cell_object = cells.miniai_spec("a", cell_marker)
 
@@ -246,6 +244,35 @@ M.add_cell_after = function(cell_marker)
   M.add_cell_below(cell_marker)
 end
 
+M.comment_cell = function(cell_marker)
+  local cell_object = cells.miniai_spec("i", cell_marker)
+
+  -- protect against empty cells
+  local n_lines = cell_object.to.line - cell_object.from.line + 1
+  if n_lines < 1 then
+    return nil
+  end
+  commenter(cell_object)
+end
+
+M.convert_to_code_cell = function(cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
+
+  vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.from.line, false, { cell_marker })
+end
+
+M.convert_to_markdown_cell = function(cell_marker)
+  local cell_object = cells.miniai_spec("a", cell_marker)
+
+  vim.api.nvim_buf_set_lines(
+    0,
+    cell_object.from.line - 1,
+    cell_object.from.line,
+    false,
+    { cell_marker .. " [markdown]" }
+  )
+end
+
 M.visually_select_cell = function(ai, cell_marker)
   local cell_object = cells.miniai_spec(ai, cell_marker)
 
@@ -291,12 +318,6 @@ M.delete_cell = function(ai, cell_marker)
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
     end
   end
-end
-
-M.split_cell = function(cell_marker)
-  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
-  vim.api.nvim_buf_set_lines(0, cursor_line - 1, cursor_line - 1, false, { cell_marker })
-  vim.api.nvim_win_set_cursor(0, { cursor_line + 1, 0 })
 end
 
 return M
