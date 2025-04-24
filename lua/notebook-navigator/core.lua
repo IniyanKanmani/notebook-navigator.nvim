@@ -1,6 +1,7 @@
 local commenter = require "notebook-navigator.commenters"
 local repls = require "notebook-navigator.repls"
 local cells = require "notebook-navigator.cells"
+local utils = require "notebook-navigator.utils"
 
 local M = {}
 
@@ -259,6 +260,12 @@ M.convert_to_code_cell = function(cell_marker)
   local cell_object = cells.miniai_spec("a", cell_marker)
 
   vim.api.nvim_buf_set_lines(0, cell_object.from.line - 1, cell_object.from.line, false, { cell_marker })
+
+  local md_object = utils.is_markdown_cell(0, cell_object)
+
+  if next(md_object) then
+    utils.remove_md_from_cell(0, md_object)
+  end
 end
 
 M.convert_to_markdown_cell = function(cell_marker)
@@ -271,6 +278,12 @@ M.convert_to_markdown_cell = function(cell_marker)
     false,
     { cell_marker .. " [markdown]" }
   )
+
+  local md_object = utils.is_markdown_cell(0, cell_object)
+
+  if not next(md_object) then
+    utils.convert_to_md_cell(0, cell_object)
+  end
 end
 
 M.visually_select_cell = function(ai, cell_marker)

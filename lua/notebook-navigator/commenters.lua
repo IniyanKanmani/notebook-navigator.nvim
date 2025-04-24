@@ -4,7 +4,15 @@ local commenters = {}
 commenters.comment_nvim = function(cell_object)
   local comment = require "Comment.api"
   local curr_pos = vim.api.nvim_win_get_cursor(0)
-  local n_lines = cell_object.to.line - cell_object.from.line + 1
+  local n_lines = 0
+
+  local cell_lines = vim.api.nvim_buf_get_lines(0, cell_object.from.line - 1, cell_object.to.line, false)
+
+  for i, line in ipairs(cell_lines) do
+    if line:find "%S" then
+      n_lines = i
+    end
+  end
 
   vim.api.nvim_win_set_cursor(0, { cell_object.from.line, 0 })
   comment.toggle.linewise.count(n_lines)
@@ -14,7 +22,17 @@ end
 -- mini.comment
 commenters.mini_comment = function(cell_object)
   local comment = require "mini.comment"
-  comment.toggle_lines(cell_object.from.line, cell_object.to.line)
+  local end_line = cell_object.from.line
+
+  local cell_lines = vim.api.nvim_buf_get_lines(0, cell_object.from.line - 1, cell_object.to.line, false)
+
+  for i, line in ipairs(cell_lines) do
+    if line:find "%S" then
+      end_line = cell_object.from.line + i - 1
+    end
+  end
+
+  comment.toggle_lines(cell_object.from.line, end_line)
 end
 
 -- no recognized comment plugin
